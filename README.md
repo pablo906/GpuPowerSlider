@@ -91,7 +91,10 @@ The ZIP contains only `GpuPowerSlider.exe`, `README.md`, and `LICENSE`.
 
 GitHub Actions builds and tests pushes and pull requests, and uploads build/test
 artifacts. Pushing a `vMAJOR.MINOR.PATCH` tag builds, tests and publishes a release
-with its ZIP and checksums. Actions are pinned to commit SHAs, and only the
+with its ZIP and checksums. Alternatively, run the workflow manually on `main`
+and enter `MAJOR.MINOR.PATCH` in the optional release-version field to publish
+the tested commit. Leave that field empty for a build only.
+Actions are pinned to commit SHAs, and only the
 release job receives repository contents write permission.
 
 ## Hardware verification

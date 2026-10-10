@@ -7,6 +7,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Optional MAJOR.MINOR.PATCH version to publish (empty builds only)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -27,9 +32,13 @@ jobs:
         env:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
         run: |
           $version = '0.0.0-dev'
-          if ($env:REF_TYPE -eq 'tag') {
+          if ($env:RELEASE_VERSION) {
+            if ($env:RELEASE_VERSION -notmatch '^\d+\.\d+\.\d+$') { throw 'Expected MAJOR.MINOR.PATCH' }
+            $version = $env:RELEASE_VERSION
+          } elseif ($env:REF_TYPE -eq 'tag') {
             if ($env:REF_NAME -notmatch '^v\d+\.\d+\.\d+$') { throw 'Expected a vMAJOR.MINOR.PATCH release tag' }
             $version = $env:REF_NAME.Substring(1)
           }
@@ -54,7 +63,7 @@ jobs:
           if-no-files-found: warn
 
   release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && inputs.release_version != '')
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -68,7 +77,7 @@ jobs:
       - name: Publish tested release
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.release_version) || github.ref_name }}
         with:
           script: |
             const fs = require('fs');
@@ -78,6 +87,7 @@ jobs:
             const release = await github.rest.repos.createRelease({
               ...context.repo,
               tag_name: tag,
+              target_commitish: context.sha,
               name: `GPU Power Slider ${tag}`,
               body: 'Windows x64 portable build. Requires the separately installed, hash-pinned NvpwrControl 2.4.6 backend and its validated driver caches. Only GA403WW / RTX 5080 Laptop is supported. See README for setup and runtime behavior.\n\nThe build and 20 hardware-free controller/UI checks passed before publication. SHA256SUMS.txt covers the executable and ZIP. No backend, driver cache or local telemetry is bundled.',
               draft: true,
