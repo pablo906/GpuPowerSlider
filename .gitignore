@@ -1,0 +1,23 @@
+# Local executable, tests and build/release output
+*.exe
+*.pdb
+*.zip
+artifacts/
+test.manifest
+
+# Private runtime data and local verification output
+state/
+actions.log
+live-verification.txt
+running-pid.txt
+test-results.txt
+test-output.txt
+ui-update-result.txt
+preview.png
+preview-scaled.png
+
+# IDE and OS output
+.vs/
+.vscode/
+Thumbs.db
+Desktop.ini
