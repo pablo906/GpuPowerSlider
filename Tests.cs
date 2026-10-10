@@ -46,6 +46,24 @@ namespace GpuPowerSlider {
         [STAThread] public static int Main() {
             try {
                 Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);
+                Control.CheckForIllegalCrossThreadCalls=true;
+                int exitCode=1;
+                // Keep a real message loop alive while nested DoEvents pumps run.
+                // Without it, async UI continuations can lose their STA context.
+                using(var host=new Form { ShowInTaskbar=false,StartPosition=FormStartPosition.Manual,Location=new Point(-3000,-3000),Size=new Size(1,1) }) {
+                    host.Shown+=delegate {
+                        host.BeginInvoke((Action)delegate {
+                            try { RunChecks();exitCode=0; }
+                            catch(Exception e) { Console.Error.WriteLine(e); }
+                            finally { host.Close(); }
+                        });
+                    };
+                    Application.Run(host);
+                }
+                return exitCode;
+            } catch(Exception e) { Console.Error.WriteLine(e);return 1; }
+        }
+        static void RunChecks() {
                 var f=new FakeDevice { Usage=99 };var c=new Controller(f);
                 Assert(c.Apply(160).Busy&&f.Writes==0&&f.BoostWrites==0,"Busy GPU changes no hardware");
                 f=new FakeDevice();c=new Controller(f);
@@ -100,8 +118,7 @@ namespace GpuPowerSlider {
                     form.Close();
                 }
                 File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"test-results.txt"),passed+" checks passed"+Environment.NewLine);
-                Console.WriteLine(passed+" checks passed");return 0;
-            } catch(Exception e) { Console.Error.WriteLine(e);return 1; }
+                Console.WriteLine(passed+" checks passed");
         }
     }
 }
